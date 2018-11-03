@@ -1,34 +1,34 @@
 //*****************************************************************************
 //
-// Copyright (C) 2014 Texas Instruments Incorporated - http://www.ti.com/
-//
-//
-//  Redistribution and use in source and binary forms, with or without
-//  modification, are permitted provided that the following conditions
+// Copyright (C) 2014 Texas Instruments Incorporated - http://www.ti.com/ 
+// 
+// 
+//  Redistribution and use in source and binary forms, with or without 
+//  modification, are permitted provided that the following conditions 
 //  are met:
 //
-//    Redistributions of source code must retain the above copyright
+//    Redistributions of source code must retain the above copyright 
 //    notice, this list of conditions and the following disclaimer.
 //
 //    Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the
+//    notice, this list of conditions and the following disclaimer in the 
+//    documentation and/or other materials provided with the   
 //    distribution.
 //
 //    Neither the name of Texas Instruments Incorporated nor the names of
 //    its contributors may be used to endorse or promote products derived
 //    from this software without specific prior written permission.
 //
-//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+//  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+//  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
 //  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+//  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+//  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
+//  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
 //  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 //  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-//  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+//  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 //  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //*****************************************************************************
@@ -37,12 +37,12 @@
 //
 // Application Name     - UART DMA
 // Application Overview - The obcountective of this application is to showcase the
-//                        use of UART along with uDMA and interrupts. The use
-//                        case includes getting input from the user and display
-//                        information on the terminal.This example take 8
-//                        characters as input which are transfered to a local
-//                        buffer using uDMA Rx channel. After receving 8
-//                        characters in the local buffer, the caharacters are
+//                        use of UART along with uDMA and interrupts. The use 
+//                        case includes getting input from the user and display 
+//                        information on the terminal.This example take 8 
+//                        characters as input which are transfered to a local 
+//                        buffer using uDMA Rx channel. After receving 8 
+//                        characters in the local buffer, the caharacters are 
 //                        send back to the terminal via UART using uDMA Tx channel.
 // Application Details  -
 // http://processors.wiki.ti.com/index.php/CC32xx_UART_DMA_Application
@@ -100,7 +100,7 @@ extern uVectorEntry __vector_table;
 //                 GLOBAL VARIABLES -- End
 //*****************************************************************************
 static unsigned char ucTextBuff[50];
-volatile static tBoolean token;
+volatile static tBoolean bRxDone;
 float count = 1;
 //*****************************************************************************
 //                      LOCAL DEFINITION
@@ -139,42 +139,50 @@ BoardInit(void)
   PRCMCC3200MCUInit();
 }
 
+//*****************************************************************************
+//
+//! Interrupt handler for UART interupt 
+//!
+//! \param  None
+//!
+//! \return None
+//!
+//*****************************************************************************
 static void UARTIntHandler()
 {
     //
     // Check if RX
     //
-    if(!token)
-    {
-    //
-    // Disable UART RX DMA
-    //
+    if(!bRxDone)
+    {	
+	//
+	// Disable UART RX DMA
+	//
         MAP_UARTDMADisable(UARTA0_BASE,UART_DMA_RX);
 
-    //
-    // Siganl RX done receiving
-    //
-        token = true;
+	//
+	// Siganl RX done
+	//
+        bRxDone = true;
     }
     else
     {
-    //
-    // Disable UART TX DMA
-    //
+	//
+	// Disable UART TX DMA
+	//
         MAP_UARTDMADisable(UARTA0_BASE,UART_DMA_TX);
     }
-
+    sscanf(ucTextBuff,"%f",&count);
     //
     // Clear the UART Interrupt
     //
     MAP_UARTIntClear(UARTA0_BASE,UART_INT_DMATX|UART_INT_DMARX);
 }
 
-
 //*****************************************************************************
 //
-//! Main function handling the UART and DMA configuration. It takes 8
-//! characters from terminal without displaying them. The string of 8
+//! Main function handling the UART and DMA configuration. It takes 8 
+//! characters from terminal without displaying them. The string of 8 
 //! caracters will be printed on the terminal as soon as 8th character is
 //! typed in.
 //!
@@ -193,7 +201,7 @@ void main()
     //
     // Initialize the RX done flash
     //
-    token = false;
+    bRxDone = false;
 
     //
     // Initialize uDMA
@@ -207,7 +215,7 @@ void main()
 
     //
     // Register interrupt handler for UART
-    // UARTIntHandler
+    //
     MAP_UARTIntRegister(UARTA0_BASE,UARTIntHandler);
 
     //
@@ -230,6 +238,9 @@ void main()
     //
     // Display Banner
     //
+
+
+
     Message("\t\t****************************************************\n\r");
     Message("\t\t  Enter the rotations per second ( RPS) from 1-10 \n\r");
     Message("\t\t You can enter a fractional number too between the range!  \n\r");
@@ -270,8 +281,8 @@ void main()
     //
     // Wait for RX to complete
     //
-    token = false;
-    while(!token)
+    bRxDone = false;
+    while(!bRxDone)
     {
         if ( count>=1 && count<=10)
         {      // first 7.5 degree Step
@@ -281,19 +292,19 @@ void main()
                                 GPIOPinWrite(GPIOA0_BASE,0x20,0x20); // output to pin 3 of ULN 2003A
                                 GPIOPinWrite(GPIOA0_BASE,0x40,0);  // output to pin 4 of ULN 2003A
 
-                                   // second Step
+                                // second Step
                                 MAP_UtilsDelay(277777/count);
                                 GPIOPinWrite(GPIOA2_BASE, 0x40,0x40);
                                 GPIOPinWrite(GPIOA2_BASE, 0x2,0);
                                 GPIOPinWrite(GPIOA0_BASE,0x20,0);
                                 GPIOPinWrite(GPIOA0_BASE,0x40,0x40);
-                                    // Third Step
+                                // Third Step
                                 MAP_UtilsDelay(277777/count);
                                 GPIOPinWrite(GPIOA2_BASE, 0x40,0);
                                 GPIOPinWrite(GPIOA2_BASE, 0x2,0x2);
                                 GPIOPinWrite(GPIOA0_BASE,0x20,0);
                                 GPIOPinWrite(GPIOA0_BASE,0x40,0x40);
-                                    // Fourth Step
+                                // Fourth Step
                                 MAP_UtilsDelay(277777/count);
                                 GPIOPinWrite(GPIOA2_BASE, 0x40,0);
                                 GPIOPinWrite(GPIOA2_BASE, 0x2,0x2);
@@ -308,3 +319,9 @@ void main()
     }
 }
 
+//*****************************************************************************
+//
+// Close the Doxygen group.
+//! @}
+//
+//*****************************************************************************
